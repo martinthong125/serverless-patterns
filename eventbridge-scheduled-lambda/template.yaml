@@ -3,16 +3,42 @@ Transform: AWS::Serverless-2016-10-31
 Description: Create a Lambda function that logs something to the console from a cron job in EventBridge
 
 Resources:
-  ScheduledFunction:
+  MartinLambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
       Handler: app.lambda_handler
-      Runtime: python3.8
+      Runtime: python3.9
       MemorySize: 128
             
-      Events:
-        ScheduledFunction:
-          Type: Schedule
-          Properties:
-            Schedule: rate(1 minute)
+  MyEventRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: 'MyEventRule'
+      Description: 'Rule that invokes Lambda function every 2 minutes'
+      ScheduleExpression: 'cron(*/2 * * * ? *)' # Schedule to run every 2 minutes
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt MartinLambdaFunction.Arn
+          Id: 'TargetFunctionV1'
+
+  MyLambdaFunctionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+        Version: '2012-10-17'
+      Policies:
+        - PolicyName: MyLambdaFunctionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:*'
+                  - 'events:*'
+                Resource: '*'
